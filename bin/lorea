@@ -1,0 +1,85 @@
+#!/bin/bash
+#
+# lorea
+#
+
+PATH="/bin:/usr/bin"
+test -n "$HOME" -a -d "$HOME/bin" && PATH="$HOME/bin:$PATH"
+CWD="$(pwd)"
+
+## Set default parameters
+
+declare -xA LOREA
+LOREA_DIR="$HOME/lorea-node"
+LOREA_USER="$(id -un)"
+LOREA_HOST="$LOREA_USER.lorea.local"
+LOREA_IP="127.0.0.1"
+LOREA_ENV="production"
+
+WWW_GROUP="$(grep APACHE_RUN_GROUP /etc/apache2/envvars | awk -F= '{ print $2; }')"
+
+DB_HOST="localhost"
+DB_NAME="lorea"
+DB_USER="$LOREA_USER"
+DB_PASS=
+DB_ROOT=
+
+## Override default configuration with user settings
+test -f "$HOME/.config/lorea/rc" && . "$HOME/.config/lorea/rc"
+
+declare -x LOREA_DIR
+declare -x LOREA_HOST
+declare -x LOREA_USER
+
+# How to use this command
+_lorea_usage() {
+    local this=$(2>/dev/null which lorea >&2 && echo "lorea" || echo "$LOREA_DIR/bin/lorea")
+
+    cat <<USAGE
+
+Usage: $this COMMAND [arg [arg...]]
+
+  Useful Commands:
+
+    help        Display this notice.
+    hub         Manage your local hub.
+    node        Manage a node.
+    setup       Run Lorea installation.
+    status      Report on Lorea installation.
+    trigger     Run an external hook.
+
+    See 'lorea help COMMAND' for more information on a specific command.
+    
+    LOREA_DIR is set to: $LOREA_DIR
+    Lorea is $(test "$lorea" = "$this" -a -d $LOREA_DIR -a -d $LOREA_DIR/.git || echo "not ")installed.
+
+USAGE
+}
+
+# The Origin of the World
+_lorea_bootstrap() {
+#    local bootstrap_url="https://github.com/lorea/lorea-node/blob/master/bin/bootstrap-lorea"
+    local bootstrap_url="http://here/~hellekin/bootstrap-lorea"
+    test -x "$(which wget)" -a -x "$(which bash)" \
+        || { echo "lorea: can't bootstrap without bash and wget" && exit 1; }
+    (wget -q --no-check-certificate -O- "$bootstrap_url" | bash)
+    return $?
+}
+test -d "$LOREA_DIR" || _lorea_bootstrap 
+# If we can't load libraries, bail out
+cd "$LOREA_DIR" && . "$LOREA_DIR/lib/lorea-common.sh" || exit 1
+
+case $# in
+    0)
+        lorea_setup
+        ;;
+    *)  
+        command="lorea_$1"
+        if type "$command" >/dev/null 2>&1; then
+            shift
+            $command "$@" || echo "lorea: command '${command#lorea_}' exited with status $?."
+        else
+            echo "lorea: '$1' is not a lorea command.  See 'lorea help'."
+        fi
+        ;;
+esac

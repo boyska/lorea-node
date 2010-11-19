@@ -1,0 +1,142 @@
+# -*- Mode: apache-mode -*-
+#
+## Apache2 VirtualHost Configuration for LOREA_HOST
+#
+# Note: this template is processed by the lorea setup command.
+# DO NOT MODIFY IT unless you know what you're doing.
+# 
+# Copyright 2010 Lorea.org
+# This file is part of Lorea Node.
+# License: GNU Affero Public License
+#
+
+NameVirtualHost LOREA_IP:80
+
+<VirtualHost LOREA_IP:80>
+    ServerName   LOREA_HOST
+    ServerAdmin  webmaster@LOREA_HOST
+
+    # No SSL is installed: that should not happen on a Lorea node,
+    # But if the certifcates are not installed yet, it will.
+    DocumentRoot LOREA_DIR/elgg/
+    <Directory   LOREA_DIR/elgg/>
+        SetEnv ELGG_SETTINGS    "LOREA_DIR/hub/LOREA_HOST/settings.php"
+        SetEnv ELGG_ENVIRONMENT "LOREA_ENV"
+        Options Indexes FollowSymlinks MultiViews
+        AllowOverride All
+        Order allow,deny
+        allow from all
+    </Directory>
+
+    <IfModule mod_ssl.c>
+        # By default, redirect to HTTPS if the certificate is
+        # available That should happen every time, but maybe the SSL
+        # certificate is not installed yet.
+        <IfModule !mod_rewrite.c>
+            # If we don't have mod_rewrite, simply redirect.
+            redirect 301 / https://LOREA_HOST/
+        </IfModule>
+        <IfModule mod_rewrite>
+            # Otherwise check that the certificate file is in place,
+            # or disable the redirection (stay in HTTP mode for newly
+            # installed nodes.)
+            RewriteEngine on
+            RewriteCond   -f    LOREA_DIR/hub/LOREA_HOST/ssl/LOREA_HOST.crt
+            RewriteCond   -f    LOREA_DIR/hub/LOREA_HOST/ssl/private/LOREA_HOST.key
+            RewriteRule   ^.*$  https://LOREA_HOST%{REQUEST_URI} [R=301,L]
+        </IfModule>
+    </IfModule>
+    
+    LogLevel Warn
+    CustomLog LOREA_DIR/hub/LOREA_HOST/access.log combined
+    ErrorLog  LOREA_DIR/hub/LOREA_HOST/error.log
+    
+    <Directory />
+        AllowOverride none
+        Options FollowSymlinks
+    </Directory>
+</VirtualHost>
+
+#
+# This VirtualHost directive is usually irrelevant, as Apache2 doesn't
+# provide VirtualHost for SSL hosts, unless yau're using Server Name
+# Indication (SNI).  SNI support for Apache2 is available in Debian
+# Testing.
+#
+<IfModule mod_ssl.c>
+
+    NameVirtualHost LOREA_IP:443
+
+    <VirtualHost LOREA_IP:443>
+        ServerName  LOREA_HOST
+        ServerAdmin webmaster@LOREA_HOST
+
+        # If using apache-mpm-tki:
+        #AssignUserID LOREA_USER:WWW_GROUP
+        
+        #
+        # mod_gnutls is not supported.
+        #   
+        #    <IfModule mod_gnutls.c>
+        #        GnuTLSEnable          on
+        #        GnuTLSCertificateFile LOREA_DIR/hub/LOREA_HOST/ssl/LOREA_HOST.crt
+        #        GnuTLSKeyFile         LOREA_DIR/hub/LOREA_HOST/ssl/private/LOREA_HOST.key
+        #        GnuTLSPriorities      NORMAL
+        #    </IfModule>
+        #
+
+        SSLEngine on
+
+        SSLCertificateFile      LOREA_DIR/hub/LOREA_HOST/ssl/LOREA_HOST.crt
+        SSLCertificateKeyFile   LOREA_DIR/hub/LOREA_HOST/ssl/private/LOREA_HOST.key
+        # You need to set this according to your own certificate's CA
+        #SSLCertificateChainFile /etc/apache2/ssl/digicertca.ca.pem
+
+        SSLSessionCacheTimeout 360
+        SSLOptions StrictRequire
+        SSLProtocol all -SSLv2
+
+        BrowserMatch ".*MSIE.*" \
+        nokeepalive ssl-unclean-shutdown \
+        downgrade-1.0 force-response-1.0
+
+        SSLCipherSuite HIGH:MEDIUM
+        SSLOptions +ExportCertData +StdEnvVars
+
+        # FOAF+SSL authentication support: requires the foafssl Elgg
+        # plugin to be installed and enabled.
+        <Location /pg/foafssl/login>
+            SSLRequireSSL
+            SSLVerifyClient optional_no_ca
+            SSLVerifyDepth 1
+            SSLOptions +ExportCertData +StdEnvVars
+            #  SSLVerifyClient optional_no_ca
+        </Location>
+        <Location /action/foafssl/suck>
+            SSLRequireSSL
+            SSLVerifyClient optional_no_ca
+            SSLVerifyDepth 1
+            SSLOptions +ExportCertData +StdEnvVars
+            # SSLVerifyClient optional_no_ca
+        </Location>
+
+    </IfModule>
+
+    ServerSignature off
+    AddDefaultCharset UTF-8
+    
+    DocumentRoot LOREA_DIR/elgg/
+    <Directory   LOREA_DIR/elgg/>
+        SetEnv ELGG_SETTINGS    "LOREA_DIR/hub/LOREA_HOST/settings.php"
+        SetEnv ELGG_ENVIRONMENT "LOREA_ENV"
+        Options Indexes FollowSymlinks MultiViews
+        AllowOverride All
+        Order allow,deny
+        allow from all
+    </Directory>
+    
+    LogLevel Warn
+    CustomLog LOREA_DIR/hub/LOREA_HOST/access-ssl.log combined
+    ErrorLog  LOREA_DIR/hub/LOREA_HOST/error-ssl.log
+
+</VirtualHost>

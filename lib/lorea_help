@@ -1,0 +1,72 @@
+#!/bin/bash
+#
+# lorea_help
+#
+#
+test -z "$LOREA" && declare -xA LOREA
+declare -rx LOREA["HELP"]=true
+
+lorea_help_node() {
+cat <<EOF
+
+  lorea node ACTION [arg [arg...]]
+
+  Actions:
+
+    new        Create a new node.
+    reset      Re-install HOST from scratch.
+
+EOF
+}
+
+lorea_help_node_new() {
+cat <<EOF
+
+  lorea node new [OPTIONS]
+
+  Install a new node according to OPTIONS.
+  OPTIONS override settings in $ETC/nodes/config-$LOREA_HOST
+  and in $ETC/templates/personal-node.sh.
+  Missing settings are set interactively.
+
+  Options:
+
+  -h LOREA_HOST    VirtualHost FQDN
+  -i LOREA_IP      VirtualHost IP (can be *)
+  -u LOREA_USER    Installation owner
+  -g WWW_GROUP     Web user group
+  -H DB_HOST       MySQL host
+  -N DB_NAME       MySQL app database name
+  -U DB_USER       MySQL app user
+  -P DB_PASS       MySQL app password
+  -R DB_ROOT       MySQL administrator password
+
+EOF
+}
+
+lorea_help_setup() {
+    cat <<EOF
+
+    lorea setup [VAR VAL [VAR VAL...]]
+
+    Run lorea installation or manage configuration.
+    See '$ETC/templates/personal-node.sh' for available VARs.
+
+EOF
+}
+
+lorea_help_status() {
+cat <<EOF
+
+    lorea status ACTION
+
+    Report on Lorea installation.
+
+    Actions:
+
+        hub         Display local hub information.
+        node [HOST] Display node information for HOST or current.
+        setup       'installed' or 'not-installed' (default)
+
+EOF
+}

@@ -1,0 +1,99 @@
+#!/bin/bash
+#
+# Clone the lorea-node.git repository and install the lorea command.
+#
+# This installer will create everything it needs in the current
+# directory.  You should run it as a dedicated user, e.g. 'lorea', on
+# your production system.  If you need more flexibility, clone the
+# lorea-node repository and check the 'lorea node' command.
+#
+# Run with:
+#
+#    wget -q -O- https://github.com/lorea/lorea-node/blob/master/bin/bootstrap-lorea | /bin/bash
+#
+# Or:
+#
+#    git clone https://github.com/lorea/lorea-node.git ~/lorea-node
+#    ~/lorea-node/bin/bootstrap-lorea
+#
+### License
+#
+# Copyright 2010 Lorea.org
+#
+# GNU Affero GPL, see http://gnu.org/licenses/AGPL
+#
+# -*- mode: sh-mode -*-
+#
+
+set -e # exit on error
+
+PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+test -n "$HOME" -a -d "$HOME/bin" && PATH="$HOME/bin:$PATH"
+
+REPO="https://github.com/lorea/lorea-node.git"
+
+fail() {
+    echo "lorea: $@" && exit 1
+}
+
+## Sanity Checks
+
+# Are we on Debian?
+test -f /etc/debian_version -a -x /usr/bin/apt-get \
+    || fail "not a Debian system?  No luck."
+# Do we have sudo?
+test -x $(which sudo) \
+    || fail "you need sudo to run this script."
+
+#
+##
+### LOREA NODE INSTALLER
+##
+#
+
+LOREA_DIR="$HOME/lorea-node"
+
+echo "lorea: bootstrap running."
+read -esp "lorea: press Enter to bootstrap, or ^C to abort."
+
+## Install Debian Dependencies
+
+echo -e "\nlorea: checking package dependencies."
+# LAMP stack
+lamp="apache2 mysql-server libapache2-mod-php5 libxml2"
+# PHP libraries for Elgg
+elgg="php5 php5-gd php-pear php-soap"
+# Lorea additions
+addons="git-core php-openid wget"
+
+2>/dev/null 
+sudo apt-get install -y -u $addons $elgg $lamp >&2
+test -x $(which apache2ctl) -a -x $(which mysql) -a -x $(which php5) -a -x $(which git) \
+    || fail "Some packages are missing and could not be installed."
+
+## Override default configuration with user settings
+test -f "$HOME/.config/lorea/rc" && . "$HOME/.config/lorea/rc" || true
+
+## Get the lorea-node repository
+test ! -d "$LOREA_DIR" -a ! -d "$LOREA_DIR/.git" && git clone "$REPO" "$LOREA_DIR"
+
+cd "$LOREA_DIR" || fail "git clone failed!"
+
+## Install the lorea command
+
+# Install lorea to a sensible local bin directory for user
+# If ~/bin is in PATH, use that.  Otherwise use /usr/local/bin
+if ! test which lorea &>/dev/null
+then
+    bin_dir=/usr/local/bin
+    ln_s="sudo $(which ln) -nfs"
+    if [ "$PATH" != "${PATH#$HOME/bin}" ]; then
+        bin_dir="$HOME/bin"
+        ln_s=${ln_s#sudo}
+    fi
+    test ! -x "$bin_dir/lorea" && $ln_s $LOREA_DIR/bin/lorea $bin_dir/lorea \
+        && echo "lorea: command installed to $bin_dir/lorea" || true
+fi
+
+## Setup user configuration in a clean shell
+echo "lorea: bootsrapped.  To continue, type: lorea setup"
