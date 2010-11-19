@@ -9,7 +9,8 @@
 #
 # Run with:
 #
-#    wget -q -O- https://github.com/lorea/lorea-node/blob/master/bin/bootstrap-lorea | /bin/bash
+#    wget --no-check-certificate -q -O- \
+#        https://github.com/lorea/lorea-node/raw/master/bin/bootstrap-lorea | /bin/bash
 #
 # Or:
 #

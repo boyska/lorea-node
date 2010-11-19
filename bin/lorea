@@ -58,8 +58,7 @@ USAGE
 
 # The Origin of the World
 _lorea_bootstrap() {
-#    local bootstrap_url="https://github.com/lorea/lorea-node/blob/master/bin/bootstrap-lorea"
-    local bootstrap_url="http://here/~hellekin/bootstrap-lorea"
+    local bootstrap_url="https://github.com/lorea/lorea-node/raw/master/bin/bootstrap-lorea"
     test -x "$(which wget)" -a -x "$(which bash)" \
         || { echo "lorea: can't bootstrap without bash and wget" && exit 1; }
     (wget -q --no-check-certificate -O- "$bootstrap_url" | bash)
