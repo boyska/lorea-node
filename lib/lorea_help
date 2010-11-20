@@ -3,8 +3,8 @@
 # lorea_help
 #
 #
-test -z "$LOREA" && declare -xA LOREA
-declare -rx LOREA["HELP"]=true
+#test -z "$LOREA" && declare -xA LOREA
+#declare -rx LOREA['help']=true
 
 lorea_help_node() {
 cat <<EOF

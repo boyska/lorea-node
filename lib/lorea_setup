@@ -1,3 +1,7 @@
+#
+# -*- shell-script -*-
+#
+
 lorea_setup_apache() {
     test -z "$LOREA_HOST" -o -z "$LOREA_IP" -o -z "$LOREA_DIR" && return 1
     _lorea_env
@@ -59,7 +63,7 @@ lorea_setup_status() {
         echo "  - Lorea Framework is not installed."
     fi
     if [ -d $HUB ]; then
-        echo "  + $(lorea_status_node_count)"
+        echo "  + $(lorea_status node_count)"
     else
         echo "  - To create your first node, type lorea node new"
     fi

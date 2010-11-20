@@ -2,6 +2,9 @@
 #
 # Get current or Switch to new host
 #
+
+LOREA['utils']=true
+
 _current_node() {
     # If we can't return anything interesting, bail out
     test -z "$1" -a -z "$LOREA_HOST" && return 1

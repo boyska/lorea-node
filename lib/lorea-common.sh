@@ -38,14 +38,8 @@ EOF
     esac
 }
 
-_lorea_lib() {
-    local lib="$1"
-    test -z $LOREA[${lib}] || return 0
-    test -f "$LIB/lorea_$lib" && . "$LIB/lorea_lib"
-}
-
 ## Utilities
-_lorea_lib utils
+. "$LIB/lorea_utils"
 
 # Set $REPLY to user input
 _ask_user() {
@@ -91,7 +85,7 @@ _not_implemented() {
 }
 
 lorea_help() {
-    _lorea_lib help
+    . "$LIB/lorea_help"
 
     local help_command="lorea_help_$1"
     if type "$help_command" 2>/dev/null >&2; then
@@ -102,19 +96,11 @@ lorea_help() {
 }
 
 lorea_hub() {
-    _lorea_lib hub
     _not_implemented
-    cat <<EOF
-
-    lorea hub
-
-    List local nodes
-
-EOF
 }
 
 lorea_node() {
-    _lorea_lib node
+    . "$LIB/lorea_node"
 
     local command="$1"
     case "$command" in
@@ -131,7 +117,7 @@ lorea_node() {
 }
 
 lorea_setup() {
-    _lorea_lib setup
+    . "$LIB/lorea_setup"
 
     if [ "help" = "$1" ]; then
         lorea_help setup
@@ -147,7 +133,7 @@ lorea_setup() {
 }
 
 lorea_status() {
-    lorea_lib status
+    . "$LIB/lorea_status"
 
     local command="lorea_status_$1"
     if ! -z "$1" -a type "$command" 2>/dev/null >&2; then
