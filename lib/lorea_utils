@@ -1,0 +1,70 @@
+# _current_node [host]
+#
+# Get current or Switch to new host
+#
+_current_node() {
+    # If we can't return anything interesting, bail out
+    test -z "$1" -a -z "$LOREA_HOST" && return 1
+    # Target host is already current host.  Reload settings?
+    test -n "$LOREA_HOST" -a "$LOREA_HOST" = "$1" && return 0
+    # Validate host context
+    local host=${1:-$LOREA_HOST}
+    test -f "$ETC/nodes/config-$host" && . "$ETC/nodes/config-$host"
+}
+
+_etc_nodes() {
+    test -d $ETC/nodes || mkdir -m 0700 $ETC/nodes
+}
+
+_etc_safe() {
+    test -d $ETC/safe || mkdir -m 0700 $ETC/safe
+}
+
+lorea_etc_secret() {
+    _etc_safe
+
+    local keyfile=$(_keyfile "$LOREA_HOST")
+
+    test -r "$keyfile" && cat "$keyfile"
+}
+
+
+_hub_for_node() {
+    local node="$HUB/$LOREA_HOST"
+    test -d "$node" && return 0
+
+    mkdir -p -m 0750 "$node"
+    mkdir    -m 2770 "$node/data"
+    mkdir    -m 0710 "$node/gpg"
+    mkdir -p -m 0710 "$node/ssl/private"
+    sudo chown -R "$LOREA_USER":"$WWW_GROUP" "$node"
+}
+
+_keyfile() {
+    local keyfile="$ETC/safe/key-$1"
+
+    if [ ! -f "$keyfile" ]; then
+        touch "$keyfile" && chmod 0600 "$keyfile" && \
+            head -n 64 /dev/urandom | \
+            tr -dc 'a-zA-Z0-9_! @#$%^&*()_+\./{}|:<>?=-' | \
+            fold -w 64 | head -c 2048 > "$keyfile"
+    fi
+    echo "$keyfile"
+}
+
+# Update /etc/hosts if we're a local node
+# @TODO check that IP is local and that DNS resolves before
+#       changing /etc/hosts
+# @TODO support custom names/local IPs
+OS_etc_hosts() {
+    if [ "$LOREA_USER.lorea.local" = "$LOREA_HOST" -a '*' != "$LOREA_IP" ]; then
+        grep $LOREA_HOST /etc/hosts &>/dev/null
+        if [ 1 -eq $? ]; then
+            # New entry
+            sudo su -c "cat < '$LOREA_IP    $LOREA_HOST' >>/etc/hosts"
+        else
+            # Existing entry
+            sudo sed -ie "s/^.*$LOREA_HOST/$LOREA_IP\t$LOREA_HOST/" /etc/hosts
+        fi
+    fi
+}

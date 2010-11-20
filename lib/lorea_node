@@ -1,0 +1,114 @@
+#!/bin/bash
+#
+# lorea_node      Implement the node commands
+#
+lorea_node_id() {
+    test -z "$LOREA_HOST" -o -z "$LOREA_USER" && return 1
+
+    _hub_for_node
+
+    local etc_node_id="$HUB/$LOREA_HOST/node_id"
+    if [ ! -f $etc_node_id ]; then
+        local node_id=`echo "$LOREA_USER@$LOREA_HOST\n$(lorea_etc_secret $LOREA_HOST)" | sha1sum | (read a b; echo $a)`
+        touch $etc_node_id && chmod 0640 $etc_node_id && echo "$node_id" > $etc_node_id
+    fi
+    test -r $etc_node_id && echo "$node_id" #cat "$etc_node_id"
+}
+
+lorea_node_new() {
+    test -z "$LOREA_HOST" && . $ETC/templates/personal-node.sh
+    test -n "$LOREA_HOST" -a -f $ETC/nodes/config-$LOREA_HOST && . $ETC/nodes/config-$LOREA_HOST
+
+    while getopts "g:h:H:i:N:P:R:u:U:" OPTION
+    do
+        case OPTION in
+            g) WWW_GROUP=$OPTARG;;
+            h) LOREA_HOST=$OPTARG;;
+            H) DB_HOST=$OPTARG;;
+            i) LOREA_IP=$OPTARG;;
+            N) DB_NAME=$OPTARG;;
+            P) DB_PASS=$OPTARG;;
+            R) DB_ROOT=$OPTARG;;
+            u) LOREA_USER=$OPTARG;;
+            U) DB_USER=$OPTARG;;
+            *) 
+                echo "lorea: unknown argument -$OPTION" >2
+                ;;
+        esac
+    done
+
+    lorea_status_node
+    read -e -p " *  Press Enter to continue, or a number to change the corresponding field: " 
+    case "$REPLY" in
+        1) # -g -u
+            say "  Permissions Settings: LOREA_USER and WWW_GROUP"
+            say
+            say "       Unless you're using apache2-mpm-tki, you should keep these "
+            say "       settings untouched. ($LOREA_USER:$WWW_GROUP)"
+            say
+            say "    LOREA_USER owns the installation."
+            say "    WWW_GROUP runs the web service.  It needs to access some files"
+            say "        and write to others.  It is set to the defaut Apache group."
+            _ask_update "LOREA_USER"
+            _ask_update "WWW_GROUP"
+            ;;
+        2) # -h -i
+            say "  VirtualHost Settings: LOREA_HOST and LOREA_IP"
+            say
+            say "  LOREA_HOST is the fully qualified host name of your node."
+            say "  If LOREA_IP is 127.0.0.1, LOREA_HOST will be added in /etc/hosts."
+            say "  LOREA_IP can also be *, and the Elgg/Lorea node will listen on all interfaces,"
+            say "  in which case /etc/hosts won't be updated."
+            _ask_update "LOREA_HOST"
+            _ask_update "LOREA_IP"
+            ;;
+        3) # LOREA_ENV
+            _ask_update "LOREA_ENV"
+            ;;
+        4) # DB_HOST
+            _ask_update "DB_HOST"
+            ;;
+        5) # DB_NAME
+            _ask_update "DB_NAME"
+            ;;
+        6) # DB_USER
+            _ask_update "DB_USER"
+            ;;
+        7) # DB_PASS
+            _ask_update "DB_PASS"
+            ;;
+        8) # DB_ROOT
+            _ask_update "DB_ROOT"
+            ;;
+        *)
+            break
+            ;;
+    esac
+    lorea_status_node
+}
+
+lorea_node_reset() {
+    local host="$1"
+    local db_name="$2"
+    local user="${3:-$(id -un)}"
+    local group="${4:-www-data}"
+    
+    if [ ! -d $HUB/$host ]; then
+        say "Cannot reset '${host}': unknown node."
+	return 1;
+    fi
+
+    echo " -  Resetting Elgg installation for $host"
+    sudo rm -f $ELGG/.htaccess $ELGG/engine/settings.php 
+    sudo rm -rf $HUB/$host/settings.php $HUB/$host/data/*
+    echo " -  MySQL operations on $db_name"
+    read -e -s -p "    + Enter MySQL root password: " db_pass
+    mysqladmin -u root -p$db_pass drop $db_name create $db_name &&\
+    sudo restart mysql &&\
+    echo " -  Apache operations" &&\
+    sudo /etc/init.d/apache2 restart 2>&1 >/dev/null &&\
+    echo " -  Running pre-install hook" &&\
+    lorea_trigger pre-install "$host" "$user" "$group" &&\
+    echo " *  Fresh Elgg at http://$host/" || echo "Reset failed."
+}
+
