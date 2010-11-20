@@ -45,7 +45,7 @@ EOF
 
 lorea_status_node_count() {
     local count=0
-    local comment="You hub counts %s node%s"
+    local comment="Your hub counts %s node%s"
 
     test -d $HUB && count=$(find $HUB -mindepth 1 -maxdepth 1 -type d | wc -l)
 
