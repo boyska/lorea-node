@@ -45,7 +45,7 @@ _lorea_lib() {
 }
 
 ## Utilities
-lorea_lib utils
+_lorea_lib utils
 
 # Set $REPLY to user input
 _ask_user() {
