@@ -36,7 +36,7 @@
 #+BEGIN_SRC bash
   git clone https://github.com/lorea/lorea-node.git
   ./lorea-node/bin/bootstrap-lorea
-#+BEGIN_SRC 
+#+END_SRC 
 
 ** Requirements
 
@@ -65,6 +65,6 @@
    should be plenty of time to get a proper SSL certificate from one
    of the friendly Certificate Authorities that provide gratis
    certificates for your website:
- 
+
    - https://www.startssl.com/
    - https://www.cacert.org/
