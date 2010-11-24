@@ -1,0 +1,70 @@
+#
+#+TITLE: EZ Lorea Node Repository
+#
+#
+
+* Introduction
+
+  The lorea-node repository aims at providing a zero-click setup of a
+  fully functional Elgg installation with the Lorea additions:
+
+  + SSL support out of the box
+  + The Lorea Framework: a set of Elgg plugins to add social network
+    federation support with privacy in mind, such as
+    - OStatus protocols for federation support
+    - GPG-encrypted groups communication
+    - TLS-only XMPP Server integration
+    - [[https://bitbucket.org/rhizomatik/][More...]]
+  + Desktop integration: scripts and tools to integrate with
+    FreeDesktop.org
+    - tray applet with drag'n'drop file upload capability and
+      site notifications
+  + An extensible lorea command for CLI
+
+* Installation
+
+  Get the [[https://github.com/lorea/lorea-node/raw/master/bin/bootstrap-lorea][bootstrap-lorea]] script and run it on your Debian-based
+  system.
+
+#+BEGIN_SRC shell-script
+  wget --no-check-certificate -q -O- \
+      https://github.com/lorea/lorea-node/raw/master/bin/bootstrap-lorea | bash
+#+END_SRC
+
+  Or clone the repository and run the script from lorea-node/bin/.
+
+#+BEGIN_SRC bash
+  git clone https://github.com/lorea/lorea-node.git
+  ./lorea-node/bin/bootstrap-lorea
+#+BEGIN_SRC 
+
+** Requirements
+
+   - A Debian-based system
+   - sudo privilege
+
+* Usage
+
+  Once installed, the *lorea* command will provide an interface to
+  manage the Elgg installation, the Lorea toolset and the nodes
+  themselves.
+
+  To create a new node interactively, run =lorea node new=.  The
+  interface is a bit raw but you want to at least:
+
+  - set 2 LOREA_HOST to the domain of your node (can be anything for a
+    local node, e.g. for testing or development.)
+  - set 4 DB_NAME to the database name you want to use
+  - set 7 DB_PASS to the database user password
+  - set 8 DB_ROOT to the database root password
+
+** SSL Support
+
+   When you create a node, =lorea= will generate self-signed SSL
+   certificates for your node with a lifetime of 3 months.  That
+   should be plenty of time to get a proper SSL certificate from one
+   of the friendly Certificate Authorities that provide gratis
+   certificates for your website:
+ 
+   - https://www.startssl.com/
+   - https://www.cacert.org/
