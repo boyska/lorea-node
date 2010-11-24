@@ -6,16 +6,16 @@
 # Especially useful on shared hosts.
 #
 
-if [ -z $ETC -a -z $TOP ]; then
+if [ -z "$ELGG" -a -z "$HUB" ]; then
     echo "This script is called from the lorea command"
     exit 0
 fi
 
-host=${1:-lorea.local}  # VirtualHost
 user=${2:-$(whoami)}    # not web user!
 group=${3:-www-data}    # web user native group
+host=${1:-$user.lorea.local}  # VirtualHost
 
-$CFG=$HUB/$host
+CFG="$HUB/$host"
 
 echo "Running Pre-installation Hook for $host"
 echo " - user \t$user"

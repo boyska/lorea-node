@@ -2,34 +2,6 @@
 # -*- shell-script -*-
 #
 
-lorea_setup_apache() {
-    test -z "$LOREA_HOST" -o -z "$LOREA_IP" -o -z "$LOREA_DIR" && return 1
-    _lorea_env
-
-    local vhost_conf="/etc/apache2/sites-available/$LOREA_HOST"
-
-    if [ -f "$vhost_conf" ]; then
-        echo "    - Configuration already exists!  Backing up to $vhost_conf.old"
-        sudo cp $vhost_conf $vhost_conf.old
-    fi
-    # Create or update Apache configuration
-    sed -e \
-        "s/LOREA_HOST/$LOREA_HOST/g; \
-        s/LOREA_IP/$LOREA_IP/g; \
-        s#LOREA_DIR#$LOREA_DIR#g; \
-        s/LOREA_ENV/$LOREA_ENV/g" \
-        $ETC/apache2/lorea.example.net > $TMP/$LOREA_HOST
-    sudo mv $TMP/$LOREA_HOST $vhost_conf
-    sudo chown root:root $vhost_conf
-    sudo chmod 0644 $vhost_conf
-
-    OS_etc_hosts
-    
-    sudo a2enmod rewrite &>/dev/null
-    sudo a2ensite $LOREA_HOST &>/dev/null
-    test -z $conf_changed && sudo /etc/init.d/apache2 restart
-}
-
 lorea_setup_config() {
     local var="$1"
     local val="$2"
@@ -38,7 +10,7 @@ lorea_setup_config() {
 }
 
 lorea_setup_dirs() {
-    test -d $TMP || mkdir -p $TMP/{cache,pids,sockets}
+    test -d $TMP || mkdir -m 0710 -p $TMP/{cache,pids,sockets}
 }
 
 lorea_setup_status() {
@@ -155,19 +127,6 @@ EOF
 #    echo 0
 #}
 
-lorea_installer_elgg_prereqs() {
-
-    say "=== Checking for Elgg 1.8 Dependencies ==="
-
-    if [ "$(php5 -v | (read a b c; echo $b))" > "5.2" ]; then
-        HAVE_PHP5="yes"
-    else
-        say "The installed version of PHP is too old. (Need >=5.2)"
-        HAVE_PHP5="no"
-    fi
-
-}
-
 lorea_installer_setup_user() {
     test -z "$LOREA_USER" -o -z "$WWW_GROUP" && return 1
 
@@ -189,9 +148,4 @@ lorea_installer_setup_user() {
             $LOREA_USER
     fi
 
-}
-
-lorea_setup_init() {
-    test -d $ELGG || lorea_setup_elgg_repo
-    test -d $TMP  || lorea_setup_dirs
 }

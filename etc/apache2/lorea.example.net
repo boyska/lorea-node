@@ -73,7 +73,7 @@ NameVirtualHost LOREA_IP:80
 
         # If using apache-mpm-tki:
         #AssignUserID LOREA_USER:WWW_GROUP
-        
+
         #
         # mod_gnutls is not supported.
         #   
@@ -120,23 +120,23 @@ NameVirtualHost LOREA_IP:80
             # SSLVerifyClient optional_no_ca
         </Location>
 
-    </IfModule>
+        ServerSignature off
+        AddDefaultCharset UTF-8
 
-    ServerSignature off
-    AddDefaultCharset UTF-8
-    
-    DocumentRoot LOREA_DIR/elgg/
-    <Directory   LOREA_DIR/elgg/>
-        SetEnv ELGG_SETTINGS    "LOREA_DIR/hub/LOREA_HOST/settings.php"
-        SetEnv ELGG_ENVIRONMENT "LOREA_ENV"
-        Options Indexes FollowSymlinks MultiViews
-        AllowOverride All
-        Order allow,deny
-        allow from all
-    </Directory>
-    
-    LogLevel Warn
-    CustomLog LOREA_DIR/hub/LOREA_HOST/access-ssl.log combined
-    ErrorLog  LOREA_DIR/hub/LOREA_HOST/error-ssl.log
+        DocumentRoot LOREA_DIR/elgg/
+        <Directory   LOREA_DIR/elgg/>
+            SetEnv ELGG_SETTINGS    "LOREA_DIR/hub/LOREA_HOST/settings.php"
+            SetEnv ELGG_ENVIRONMENT "LOREA_ENV"
+            Options Indexes FollowSymlinks MultiViews
+            AllowOverride All
+            Order allow,deny
+            allow from all
+        </Directory>
 
-</VirtualHost>
+        LogLevel Warn
+        CustomLog LOREA_DIR/hub/LOREA_HOST/access-ssl.log combined
+        ErrorLog  LOREA_DIR/hub/LOREA_HOST/error-ssl.log
+
+    </VirtualHost>
+
+</IfModule>

@@ -1,6 +1,4 @@
-#
-# lorea_status
-#
+#!/bin/bash
 
 lorea_status_dump() {
 cat <<EOF
@@ -15,6 +13,16 @@ done) Elgg Install:    $ELGG
  Lorea is $(lorea_status)
 
 EOF
+}
+
+lorea_status_help() {
+    lorea help status
+}
+
+lorea_status_hub() {
+    for host in $(/bin/ls $HUB/); do
+        say "  + $host"
+    done
 }
 
 lorea_status_node() {

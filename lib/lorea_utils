@@ -1,9 +1,8 @@
+#!/bin/bash
 # _current_node [host]
 #
 # Get current or Switch to new host
 #
-
-LOREA['utils']=true
 
 _current_node() {
     # If we can't return anything interesting, bail out
@@ -60,13 +59,11 @@ _keyfile() {
 #       changing /etc/hosts
 # @TODO support custom names/local IPs
 OS_etc_hosts() {
-    if [ "$LOREA_USER.lorea.local" = "$LOREA_HOST" -a '*' != "$LOREA_IP" ]; then
+    if [ "$LOREA_USER.lorea.local" = "$LOREA_HOST" -a '*' != "$LOREA_IP" -o "127.0.0.1" = "$LOREA_IP" ]; then
         grep $LOREA_HOST /etc/hosts &>/dev/null
-        if [ 1 -eq $? ]; then
-            # New entry
-            sudo su -c "cat < '$LOREA_IP    $LOREA_HOST' >>/etc/hosts"
-        else
-            # Existing entry
+        if [ 1 -eq $? ]; then            # New entry
+            sudo su -c "echo '$LOREA_IP    $LOREA_HOST' >> /etc/hosts"
+        else                             # Existing entry
             sudo sed -ie "s/^.*$LOREA_HOST/$LOREA_IP\t$LOREA_HOST/" /etc/hosts
         fi
     fi

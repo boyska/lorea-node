@@ -38,6 +38,10 @@ EOF
     esac
 }
 
+_lorea_tmp() {
+    mkdir -m 0710 -p $TMP || true
+}
+
 ## Utilities
 . "$LIB/lorea_utils"
 
@@ -49,17 +53,28 @@ _ask_user() {
 
 _ask_update() {
     local var="$1"
-    echo "  $var is set to $(eval echo \$$var)"
-    if "DB_PASS" = "$var" -o "DB_ROOT" = "$var"; then
-        _ask_user -s
-    else
-        _ask_user
+    local silent=
+
+    if [ "DB_PASS" = "$var" -o "DB_ROOT" = "$var" ]; then
+        silent=true
     fi
-    if -z "$REPLY"; then
+    if [ -z "$silent" ]; then
+        local val="$(eval echo \$$var)"
+        if [ -z "$val" ]; then
+            echo "  $var is not set"
+        else
+            echo "  $var is set to $val"
+        fi
+        _ask_user
+    else
+        echo "  $var (not shown)"
+        _ask_user -s
+    fi
+    if [ -z "$REPLY" ]; then
         echo "  Value unchanged"
     else
-        "$var"="$REPLY"
-        echo "  Value set to '$REPLY'"
+        eval "$var=\"$REPLY\""
+        test -z "$silent" && echo "  Value set to '$REPLY'" || echo -e "\n  Value changed"
     fi
 }
 
@@ -111,13 +126,15 @@ lorea_node() {
         reset)
             shift; lorea_node_reset "$1" "$2" "$3" "$4";;
         *)
-            lorea_help_node;;
+            lorea_help node;;
     esac
     exit $?
 }
 
 lorea_setup() {
     . "$LIB/lorea_setup"
+
+    lorea_setup_dirs
 
     if [ "help" = "$1" ]; then
         lorea_help setup
@@ -152,5 +169,5 @@ lorea_trigger() {
 	return 1
     fi
     shift
-    $hook "$@"
+    ELGG="$ELGG" HUB="$HUB" $hook "$@"
 }

@@ -16,8 +16,11 @@ lorea_node_id() {
 }
 
 lorea_node_new() {
-    test -z "$LOREA_HOST" && . $ETC/templates/personal-node.sh
-    test -n "$LOREA_HOST" -a -f $ETC/nodes/config-$LOREA_HOST && . $ETC/nodes/config-$LOREA_HOST
+    if [ -n "$1" ]; then
+        LOREA_HOST="$1"
+    fi
+    test -z "$LOREA_HOST" && . "$ETC/templates/personal-node.sh"
+    test -n "$LOREA_HOST" -a -f "$ETC/nodes/config-$LOREA_HOST" && . "$ETC/nodes/config-$LOREA_HOST"
 
     while getopts "g:h:H:i:N:P:R:u:U:" OPTION
     do
@@ -37,63 +40,80 @@ lorea_node_new() {
         esac
     done
 
-    lorea_status_node
-    read -e -p " *  Press Enter to continue, or a number to change the corresponding field: " 
-    case "$REPLY" in
-        1) # -g -u
-            say "  Permissions Settings: LOREA_USER and WWW_GROUP"
-            say
-            say "       Unless you're using apache2-mpm-tki, you should keep these "
-            say "       settings untouched. ($LOREA_USER:$WWW_GROUP)"
-            say
-            say "    LOREA_USER owns the installation."
-            say "    WWW_GROUP runs the web service.  It needs to access some files"
-            say "        and write to others.  It is set to the defaut Apache group."
-            _ask_update "LOREA_USER"
-            _ask_update "WWW_GROUP"
-            ;;
-        2) # -h -i
-            say "  VirtualHost Settings: LOREA_HOST and LOREA_IP"
-            say
-            say "  LOREA_HOST is the fully qualified host name of your node."
-            say "  If LOREA_IP is 127.0.0.1, LOREA_HOST will be added in /etc/hosts."
-            say "  LOREA_IP can also be *, and the Elgg/Lorea node will listen on all interfaces,"
-            say "  in which case /etc/hosts won't be updated."
-            _ask_update "LOREA_HOST"
-            _ask_update "LOREA_IP"
-            ;;
-        3) # LOREA_ENV
-            _ask_update "LOREA_ENV"
-            ;;
-        4) # DB_HOST
-            _ask_update "DB_HOST"
-            ;;
-        5) # DB_NAME
-            _ask_update "DB_NAME"
-            ;;
-        6) # DB_USER
-            _ask_update "DB_USER"
-            ;;
-        7) # DB_PASS
-            _ask_update "DB_PASS"
-            ;;
-        8) # DB_ROOT
-            _ask_update "DB_ROOT"
-            ;;
-        *)
-            break
-            ;;
-    esac
-    lorea_status_node
-}
+    lorea_status node
+    local DONE=
+    while [ -z "$DONE" ]; do
+        DONE=
+        read -e -p " *  Press Enter to continue, or a number to change the corresponding field: " 
+        case "$REPLY" in
+            1) # -g -u
+                say "  Permissions Settings: LOREA_USER and WWW_GROUP"
+                say
+                say "       Unless you're using apache2-mpm-tki, you should keep these "
+                say "       settings untouched. ($LOREA_USER:$WWW_GROUP)"
+                say
+                say "    LOREA_USER owns the installation."
+                say "    WWW_GROUP runs the web service.  It needs to access some files"
+                say "        and write to others.  It is set to the defaut Apache group."
+                _ask_update "LOREA_USER"
+                _ask_update "WWW_GROUP"
+                ;;
+            2) # -h -i
+                say "  VirtualHost Settings: LOREA_HOST and LOREA_IP"
+                say
+                say "  LOREA_HOST is the fully qualified host name of your node."
+                say "  If LOREA_IP is 127.0.0.1, LOREA_HOST will be added in /etc/hosts."
+                say "  LOREA_IP can also be *, and the Elgg/Lorea node will listen on all interfaces,"
+                say "  in which case /etc/hosts won't be updated."
+                _ask_update "LOREA_HOST"
+                _ask_update "LOREA_IP"
+                ;;
+            3) # LOREA_ENV
+                _ask_update "LOREA_ENV"
+                ;;
+            4) # DB_NAME
+                _ask_update "DB_NAME"
+                ;;
+            5) # DB_HOST
+                _ask_update "DB_HOST"
+                ;;
+            6) # DB_USER
+                _ask_update "DB_USER"
+                ;;
+            7) # DB_PASS
+                _ask_update "DB_PASS"
+                ;;
+            8) # DB_ROOT
+                _ask_update "DB_ROOT"
+                ;;
+            *)
+                DONE=true
+                ;;
+        esac
+    done
+    lorea_node_save_config
+    lorea_node_setup_database
+    lorea_node_setup_apache
+    lorea_node_setup_elgg
+
+    lorea trigger post-install "$LOREA_HOST" "$LOREA_USER" "$WWW_GROUP"
+    sudo /etc/init.d/apache2 force-reload
+    lorea_status node
+ }
 
 lorea_node_reset() {
+    local db_pass="$DB_ROOT"
     local host="$1"
     local db_name="$2"
     local user="${3:-$(id -un)}"
     local group="${4:-www-data}"
+
+    if [ -z "$host" -o -z "$db_name" ]; then
+        echo "Usage: lorea node reset host db_name user group"
+        return 1;
+    fi
     
-    if [ ! -d $HUB/$host ]; then
+    if [ ! -d "$HUB/$host" ]; then
         say "Cannot reset '${host}': unknown node."
 	return 1;
     fi
@@ -102,9 +122,8 @@ lorea_node_reset() {
     sudo rm -f $ELGG/.htaccess $ELGG/engine/settings.php 
     sudo rm -rf $HUB/$host/settings.php $HUB/$host/data/*
     echo " -  MySQL operations on $db_name"
-    read -e -s -p "    + Enter MySQL root password: " db_pass
-    mysqladmin -u root -p$db_pass drop $db_name create $db_name &&\
-    sudo restart mysql &&\
+    test -z "$db_pass" && read -e -s -p "    + Enter MySQL root password: " db_pass
+    mysqladmin -u root -p$db_pass drop $db_name create $db_name refresh &&\
     echo " -  Apache operations" &&\
     sudo /etc/init.d/apache2 restart 2>&1 >/dev/null &&\
     echo " -  Running pre-install hook" &&\
@@ -112,3 +131,218 @@ lorea_node_reset() {
     echo " *  Fresh Elgg at http://$host/" || echo "Reset failed."
 }
 
+lorea_node_save_config() {
+    local config="$ETC/nodes/config-$LOREA_HOST"
+    local extra_config=""
+    for var in ${!LOREA_@} WWW_GROUP ${!DB_@}; do
+        val=$(eval echo \$$var)
+        test -z "$val" || extra_config=$(echo -e "$var=\"$val\"\n$extra_config")
+    done
+    _etc_nodes
+    cat > "$config" <<EOF
+# -*- Mode: shell-script -*-
+#
+## User Configuration for lorea-node
+#
+# This is a shell fragment sourced by the lorea command.
+# DO NOT EDIT THIS FILE: use the 'lorea setup' command instead.
+#
+## LOREA_DIR
+#
+# Path to your local copy of the lorea-node Git repository.
+#
+# You can override the default ~/lorea-node to point to your own repo.
+# For a shared installation, you might use /usr/share/lorea/.
+# 
+LOREA_DIR="$LOREA_DIR"
+#
+# You can override any default configuration by setting a different
+# value in this file.  All values are defined in etc/lorearc.
+#
+$extra_config
+#
+# File generated at $(date +%F_%T) by $0
+#
+EOF
+
+}
+
+_mysql_running() {
+    mysqladmin -s -h "$DB_HOST" ping
+}
+
+lorea_node_setup_database() {
+    local host="localhost"
+    if [ "$DB_HOST" != "$host" ]; then
+        host=$(hostname --fqdn)
+    fi
+    local tmp=$(tempfile -d "$TMP" -s "-$DB_NAME.sql")
+    cat > $tmp <<SQL
+CREATE DATABASE \`$DB_NAME\`;
+GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO \`$DB_USER\`@\`$host\` IDENTIFIED BY '$DB_PASS';
+FLUSH PRIVILEGES;
+SQL
+   _mysql_running && mysql -uroot -p"$DB_ROOT" -h "$DB_HOST" < "$tmp"
+   rm -f "$tmp"
+}
+
+lorea_node_teardown_database() {
+    _mysql_running && mysqladmin -uroot -p"$DB_ROOT" drop "$DB_NAME"
+}
+
+# Here is the real treat.
+# We run the Elgg installer ourselves, so that the Lorea node is ready.
+lorea_node_setup_elgg() {
+    _elgg_requirements || fail "Elgg requirements are not met.  Aborted."
+    _hub_for_node
+    # Settings
+    sed -e \
+        "s/{{dbuser}}/$DB_USER/; \
+         s/{{dbpassword}}/$DB_PASS/; \
+         s/{{dbname}}/$DB_NAME/; \
+         s/{{dbhost}}/$DB_HOST/; \
+         s/{{dbprefix}}/elgg_/" \
+        "$ELGG/engine/settings.example.php" > "$HUB/$LOREA_HOST/settings.php"
+    # Engine bootstrap
+    echo "  *  Where should administrator email go?"
+    ADM_EMAIL=; while test -z "$ADM_EMAIL"; do _ask_update "ADM_EMAIL"; done
+    local ADM_PASS=$(p=$(head -c 512 /dev/urandom | tr -cd 'A-F0-9'); echo ${p:1:8})
+    sed -e \
+        "s&^require_once.*$&require_once('$ELGG/install/ElggInstaller.php')\;&; \
+         s/^.*'dbuser'.*$/	'dbuser' => '$DB_USER',/; \
+         s/^.*'dbpassword'.*$/	'dbpassword' => '$DB_PASS',/; \
+         s/^.*'dbname'.*$/	'dbname' => '$DB_NAME',/; \
+         s/^.*'sitename'.*$/	'sitename' => 'EZ Lorea Node',/; \
+         s&^.*'wwwroot'.*$&	'wwwroot' => 'https://$LOREA_HOST/',&; \
+         s&^.*'dataroot'.*$&	'dataroot' => '$HUB/$LOREA_HOST/data',&; \
+         s/^.*'displayname'.*$/	'displayname' => 'Node Administrator',/; \
+         s/^.*'email'.*$/	'email' => '$ADM_EMAIL',/; \
+         s/^.*'username'.*$/	'username' => 'root',/; \
+         s/^.*'password'.*$/	'password' => '$ADM_PASS',/" \
+        "$ELGG/install/cli/sample_installer.php" > "$HUB/$LOREA_HOST/installer.php"
+    php5 -q -f "$HUB/$LOREA_HOST/installer.php"
+    # Fix .htaccess with higher file upload limits
+    sed -ie "s/\(# upload size limit to \)5Mb/\125Mb/;s/\(upload_max_filesize \)5242880/\126214400/" "$ELGG/.htaccess"
+
+    echo
+    echo "  You can now login into your Lorea node at"
+    echo
+    echo "    https://$LOREA_HOST/"
+    echo
+    echo "  Your Lorea Node administrator account is: 'root'."
+    echo "  Please change the generated password: '$ADM_PASS'."
+    echo
+    sleep 2
+}
+
+_elgg_requirements() {
+    # PHP 5.2+
+    if [[ "5.2" > "$(php5 -v | (read a b c; echo $b))" ]]; then
+        say "PHP 5.2 or more is required."
+    fi
+    # TODO safe_mode, register_globals = Off; open_basedir unset; arg_separator.output = &
+    # MySQL 5+ in standard sql_mode
+    _mysql_running || fail "MySQL 5+ MUST be running on $DB_HOST"
+    local v5=$(mysql -V | sed 's/^.*Distrib \(5\..*\),.*$/\1/')
+    if [[ "5.0" > "$v5" ]]; then
+        fail "MySQL version 5 minimum is required"
+    fi
+    local mysql_sql_mode=$(mysqladmin -uroot -p"$DB_ROOT" variables | grep sql_mode | cut -d\| -f3)
+    mysql_sql_mode=${mysql_sql_mode## *}
+    test -z "$mysql_sql_mode" || say "MySQL MUST run with sql_mode in standard mode (i.e., empty value)"
+}
+
+lorea_node_setup_apache() {
+    test -z "$LOREA_HOST" -o -z "$LOREA_IP" -o -z "$LOREA_DIR" && return 1
+    _lorea_env
+    _lorea_tmp
+
+    local vhost_conf="/etc/apache2/sites-available/$LOREA_HOST"
+
+    if [ -f "$vhost_conf" ]; then
+        echo "    - Configuration already exists!  Backing up to $vhost_conf.old"
+        sudo cp $vhost_conf $vhost_conf.old
+    fi
+    # Create or update Apache configuration
+    sed -e \
+        "s/LOREA_HOST/$LOREA_HOST/g; \
+        s/LOREA_IP/$LOREA_IP/g; \
+        s#LOREA_DIR#$LOREA_DIR#g; \
+        s/LOREA_ENV/$LOREA_ENV/g" \
+        $ETC/apache2/lorea.example.net > $TMP/$LOREA_HOST
+    sudo mv $TMP/$LOREA_HOST $vhost_conf
+    sudo chown root:root $vhost_conf
+    sudo chmod 0644 $vhost_conf
+
+    OS_etc_hosts
+
+    if [ ! -f "$HUB/$LOREA_HOST/ssl/$LOREA_HOST.crt" ]; then
+        say "    !  Missing SSL certificate: Generating a self-signed cert for now."
+        _create_ssl_cert_for_node "$LOREA_HOST"
+    fi
+
+    sudo a2enmod rewrite
+    sudo a2enmod ssl
+    sudo a2ensite $LOREA_HOST
+}
+
+# Poor man's self-signed certificate
+_create_ssl_cert_for_node() {
+    if [ -z "$1" ]; then
+        echo "Usage: _create_ssl_cert_for_node host"
+        return 1
+    fi
+    local host="$1"
+    local certs="$HUB/$host/ssl"
+    local crt="$certs/$host.crt"
+    local key="$certs/private/$host.key"
+
+    _hub_for_node "$host"
+    _openssl_installed
+
+    # SSL Subject (watch out the first newline)
+    s="
+C=FX
+ST=Cyberspace
+localityName=Utopia
+O=Lorea.org
+OU=Lorea Node
+commonName=$host
+emailAddress=webmaster@$host
+"
+    local tmp=$(mktemp -d --tmpdir ssl.XXXXXXXXXX)
+    test ! -d "$tmp" && fail "Cannot create temporary directory"
+
+    # Create a 256bits passwordless key
+    local pass=$(head -c 128 /dev/urandom | tr -cd "a-zA-Z0-9")
+    echo "$pass" | openssl genrsa -des3 -passout stdin -out "$tmp/$host.p.key" 2048 \
+        || fail "Cannot create key file $host.key"
+    echo "$pass" | openssl rsa -passin stdin -in "$tmp/$host.p.key" -out "$tmp/$host.key"
+    rm -f "$tmp/$host.p.key"
+    # Create a CSR
+    openssl req -new -batch -nodes -sha1 -key "$tmp/$host.key" -out "$tmp/$host.csr" \
+        -subj "$(echo -n "$s" | tr "\n" "/")" \
+        || fail "Cannot create CSR $host.csr"
+    # Create certificate (give 3 months to get a proper cert)
+    openssl x509 -req -days 90 \
+        -in "$tmp/$host.csr" -signkey "$tmp/$host.key" -out "$tmp/$host.crt" \
+        || fail "Cannot create SSL certificate $host.crt"
+
+    local ret="$?"
+
+    if [ -f "$tmp/$host.key" -a -f "$tmp/$host.crt" ]; then
+        mv "$tmp/$host.key" "$key"
+        chmod 0600 "$key"
+        mv "$tmp/$host.crt" "$crt"
+        chmod 0644 "$crt"
+    else
+        ret=1
+    fi
+    rm -rf "$tmp"
+
+    return $ret
+}
+
+_openssl_installed() {
+    2>/dev/null sudo apt-get install -y -u openssl >&2
+}
