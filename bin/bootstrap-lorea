@@ -63,9 +63,9 @@ echo -e "\nlorea: checking package dependencies."
 # LAMP stack
 lamp="apache2 mysql-server libapache2-mod-php5 libxml2"
 # PHP libraries for Elgg
-elgg="php5 php5-gd php-pear php-soap"
+elgg="php5 php5-gd php5-mysql php-pear php-soap"
 # Lorea additions
-addons="git-core php-openid wget"
+addons="git-core openssl php-openid wget"
 
 2>/dev/null 
 sudo apt-get install -y -u $addons $elgg $lamp >&2
