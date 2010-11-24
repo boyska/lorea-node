@@ -27,6 +27,7 @@
   system.
 
 #+BEGIN_SRC shell-script
+  # Ewww vvvvvvvvvvvvvvvvvvvv
   wget --no-check-certificate -q -O- \
       https://github.com/lorea/lorea-node/raw/master/bin/bootstrap-lorea | bash
 #+END_SRC
@@ -66,5 +67,5 @@
    of the friendly Certificate Authorities that provide gratis
    certificates for your website:
 
-   - https://www.startssl.com/
-   - https://www.cacert.org/
+   - [[https://www.startssl.com/][https://www.startssl.com/]]
+   - [[https://www.cacert.org/][https://www.cacert.org/]]
