@@ -1,0 +1,16 @@
+#
+# Template for lorea-node logrotate configuration
+#
+LOREA_DIR/log/LOREA_HOST_*.log {
+	weekly
+	missingok
+	rotate 10
+	compress
+	delaycompress
+	notifempty
+	create 640 root LOREA_GROUP
+	sharedscripts
+	postrotate
+		/etc/init.d/apache2 reload > /dev/null
+	endscript
+}
