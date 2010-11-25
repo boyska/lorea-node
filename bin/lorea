@@ -7,6 +7,9 @@ PATH="/bin:/usr/bin"
 test -n "$HOME" -a -d "$HOME/bin" && PATH="$HOME/bin:$PATH"
 CWD="$(pwd)"
 
+readonly original_command="$(basename $0) $@"
+_original_command() { echo "$original_command"; }
+
 ## Set default parameters
 
 declare -xA LOREA
@@ -21,7 +24,7 @@ LOREA_LOG="$LOREA_DIR/log/lorea.log"
 WWW_GROUP="$(grep APACHE_RUN_GROUP /etc/apache2/envvars | awk -F= '{ print $2; }')"
 
 DB_HOST="localhost"
-DB_NAME="lorea"
+DB_NAME="lorea_$LOREA_USER"
 DB_USER="$LOREA_USER"
 DB_PASS=
 DB_ROOT=
