@@ -48,8 +48,8 @@ NameVirtualHost LOREA_IP:80
     </IfModule>
     
     LogLevel Warn
-    CustomLog LOREA_DIR/hub/LOREA_HOST/access.log combined
-    ErrorLog  LOREA_DIR/hub/LOREA_HOST/error.log
+    CustomLog LOREA_DIR/log/LOREA_HOST_access.log combined
+    ErrorLog  LOREA_DIR/log/LOREA_HOST_error.log
     
     <Directory />
         AllowOverride none
@@ -134,8 +134,8 @@ NameVirtualHost LOREA_IP:80
         </Directory>
 
         LogLevel Warn
-        CustomLog LOREA_DIR/hub/LOREA_HOST/access-ssl.log combined
-        ErrorLog  LOREA_DIR/hub/LOREA_HOST/error-ssl.log
+        CustomLog LOREA_DIR/log/LOREA_HOST_access-ssl.log combined
+        ErrorLog  LOREA_DIR/log/LOREA_HOST_error-ssl.log
 
     </VirtualHost>
 
