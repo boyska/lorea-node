@@ -3,12 +3,12 @@
 lorea_status_dump() {
 cat <<EOF
 
- Lorea Directory: $TOP
- Lorea Nodes:     $HUB
-$(for n in $(/bin/ls $HUB); do
+ Lorea Directory: $(_TOP)
+ Lorea Nodes:     $(_HUB)
+$(for n in $(/bin/ls $(_HUB)); do
     node=$(basename $n)
     echo -e "    $(lorea_node_id $node)\t$node"
-done) Elgg Install:    $ELGG
+done) Elgg Install:    $(_ELGG)
 
  Lorea is $(lorea_status)
 
@@ -20,7 +20,7 @@ lorea_status_help() {
 }
 
 lorea_status_hub() {
-    for host in $(/bin/ls $HUB/); do
+    for host in $(/bin/ls $(_HUB)/); do
         say "  + $host"
     done
 }
@@ -37,8 +37,8 @@ cat <<EOF
 [1] User:Group:             $LOREA_USER:$WWW_GROUP
 [2] VirtualHost:            $LOREA_HOST on $LOREA_IP
 [3] |_ ELGG_ENVIRONMENT:    $LOREA_ENV
-    |_ ELGG_SETTINGS:       $HUB/$LOREA_HOST/settings.php
-    \__>> $(test -f $HUB/$LOREA_HOST/settings.php && echo INSTALLED || echo NOT INSTALLED).
+    |_ ELGG_SETTINGS:       $(_HUB)/$LOREA_HOST/settings.php
+    \__>> $(test -f $(_HUB)/$LOREA_HOST/settings.php && echo INSTALLED || echo NOT INSTALLED).
 
     Database Setup:
 
@@ -55,7 +55,7 @@ lorea_status_node_count() {
     local count=0
     local comment="Your hub counts %s node%s"
 
-    test -d $HUB && count=$(find $HUB -mindepth 1 -maxdepth 1 -type d | wc -l)
+    test -d $(_HUB) && count=$(find $(_HUB) -mindepth 1 -maxdepth 1 -type d | wc -l)
 
     case "$count" in
         0) printf "$comment" "no" ".";;

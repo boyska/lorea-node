@@ -5,16 +5,24 @@
 
 test -z "$LOREA_DIR" -o ! -d "$LOREA_DIR" && exit 0
 test -f "$HOME/.config/lorea/rc" && . $HOME/.config/lorea/rc
-#TOP=$(cd $(dirname $(dirname $0)) && pwd)
-TOP="$LOREA_DIR"
-BIN="$TOP/bin"
-LIB="$TOP/lib"
-LOG="$TOP/log"
-ETC="$TOP/etc"
-TMP="$TOP/tmp"
 
-ELGG="$TOP/elgg"
-HUB="$TOP/hub"
+_TOP()  { echo "$LOREA_DIR";   }
+_BIN()  { echo "$(_TOP)/bin";  }
+_ELGG() { echo "$(_TOP)/elgg"; }
+_ETC()  { echo "$(_TOP)/etc";  }
+_HUB()  { echo "$(_TOP)/hub";  }
+_LIB()  { echo "$(_TOP)/lib";  }
+_LOG()  { echo "$(_TOP)/log";  }
+_TMP()  { echo "$(_TOP)/tmp";  }
+
+_current_user() {
+    if [ "$(id -un)" != "$LOREA_USER" ]; then
+        command="sudo su - $LOREA_USER -c %s"
+    else
+        command="%s"
+    fi
+    $(printf $command "$@")
+}
 
 _lorea_env() {
     test -n "$LOREA_ENV" && return 0
@@ -39,15 +47,15 @@ EOF
 }
 
 _lorea_log() {
-    mkdir -m 0710 -p $LOG || true
+    _current_user "mkdir -m 0710 -p $(_LOG)" || true
 }
 
 _lorea_tmp() {
-    mkdir -m 0710 -p $TMP || true
+   _current_user "mkdir -m 0710 -p $(_TMP)" || true
 }
 
 ## Utilities
-. "$LIB/lorea_utils"
+. "$(_LIB)/lorea_utils"
 
 # Set $REPLY to user input
 _ask_user() {
@@ -88,7 +96,7 @@ fail() {
 }
 
 log() {
-    local TMP=${TMP:-/tmp}
+    local TMP=$(test -d "$(_TMP)" && echo $(_TMP) || echo /tmp)
     echo "$@" >> $TMP/lorea.log
 }
 
@@ -104,7 +112,7 @@ _not_implemented() {
 }
 
 lorea_help() {
-    . "$LIB/lorea_help"
+    . "$(_LIB)/lorea_help"
 
     local help_command="lorea_help_$1"
     if type "$help_command" 2>/dev/null >&2; then
@@ -119,7 +127,7 @@ lorea_hub() {
 }
 
 lorea_node() {
-    . "$LIB/lorea_node"
+    . "$(_LIB)/lorea_node"
 
     local command="$1"
     case "$command" in
@@ -136,7 +144,7 @@ lorea_node() {
 }
 
 lorea_setup() {
-    . "$LIB/lorea_setup"
+    . "$(_LIB)/lorea_setup"
 
     lorea_setup_dirs
 
@@ -146,15 +154,15 @@ lorea_setup() {
     fi
 
     test -d "$HOME/.config/lorea" || _installer_run_user_setup
-    . $HOME/.config/lorea/rc
+    test -f $HOME/.config/lorea/rc && . $HOME/.config/lorea/rc
     test -d "$LOREA_DIR"          || _installer_clone_lorea_node_git
-    test -d "$ELGG"               || _installer_init_elgg_git 
+    test -d $(_ELGG)              || _installer_init_elgg_git 
 
     lorea_setup_status
 }
 
 lorea_status() {
-    . "$LIB/lorea_status"
+    . "$(_LIB)/lorea_status"
 
     local command="lorea_status_$1"
     type "$command" 2>/dev/null >&2
@@ -162,17 +170,17 @@ lorea_status() {
         shift
         $command "$@"
     else
-        test -d "$ELGG" -a -$(lorea help &>/dev/null && true || false) \
+        test -d "$(_ELGG)" -a -$(lorea help &>/dev/null && true || false) \
             && echo "installed" || echo "not-installed"
     fi
 }
 
 lorea_trigger() {
-    local hook="$LIB/run-$1.sh"
+    local hook="$(_LIB)/run-$1.sh"
     if [ ! -x "$hook" ]; then
         echo "Unknown hook: $hook."
 	return 1
     fi
     shift
-    ELGG="$ELGG" HUB="$HUB" $hook "$@"
+    ELGG=$(_ELGG) HUB=$(_HUB) $hook "$@"
 }

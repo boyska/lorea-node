@@ -10,7 +10,7 @@ lorea_setup_config() {
 }
 
 lorea_setup_dirs() {
-    test -d $TMP || mkdir -m 0710 -p $TMP/{cache,pids,sockets}
+    test -d $(_TMP) || mkdir -m 0710 -p $(_TMP)/{cache,pids,sockets}
 }
 
 lorea_setup_status() {
@@ -24,17 +24,17 @@ lorea_setup_status() {
     else
         echo "  - The lorea command is not in PATH."
     fi
-    if [ -d $ELGG ]; then
+    if [ -d $(_ELGG) ]; then
         echo "  + Elgg 1.8 sources are present."
     else
         echo "  - Elgg 1.8 sources are missing."
     fi
-    if [ -d $ELGG/mod/lorea_framework ]; then
+    if [ -d $(_ELGG)/mod/lorea_framework ]; then
         echo "  + Lorea Framework is present"
     else
         echo "  - Lorea Framework is not installed."
     fi
-    if [ -d $HUB ]; then
+    if [ -d $(_HUB) ]; then
         echo "  + $(lorea_status node_count)"
     else
         echo "  - To create your first node, type lorea node new"
@@ -42,11 +42,11 @@ lorea_setup_status() {
 }
 
 lorea_setup_tools() {
-    # Setup Myamoto
-    say " + Setting up Myamoto (noop)"
+    # Setup Miyamoto
+    say " + Setting up Miyamoto (noop)"
     # Setup Cryptobot
     say " + Setting up Cryptobot (noop)"
-    if [ "127.0.0.1" = "$LOREA_IP" ]; then
+    if [ "127.0.0.1" = "$LOREA_IP" -o "$LOREA_USER.lorea.local" = "$LOREA_HOST" ]; then
         # Local node: setup Desktop tools
         say " + Setting up Desktop tools (noop)"
     fi
@@ -55,7 +55,7 @@ lorea_setup_tools() {
 lorea_setup_user() { _installer_run_user_setup; }
 
 _installer_init_elgg_git() {
-    test -d "$ELGG" && return 0
+    test -d "$(_ELGG)" && return 0
 
     _lorea_env
 
@@ -129,25 +129,3 @@ EOF
 #    echo 0
 #}
 
-lorea_installer_setup_user() {
-    test -z "$LOREA_USER" -o -z "$WWW_GROUP" && return 1
-
-    grep $WWW_GROUP /etc/group &>/dev/null
-    if [ 1 -eq $? ]; then
-        # Create custom group
-        sudo addgroup $WWW_GROUP
-    fi
-
-    id -un $LOREA_USER &>/dev/null
-    if [ 1 -eq $? ]; then 
-        # Create user
-        # The --gid expects Debian-like users with primary group the username
-        sudo adduser --system \
-            --home /home/$LOREA_USER \
-            --gecos "Lorea User" \
-            --gid $(id -g $WWW_GROUP) \
-            --shell /bin/bash \
-            $LOREA_USER
-    fi
-
-}

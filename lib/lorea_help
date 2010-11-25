@@ -25,8 +25,8 @@ cat <<EOF
   lorea node new [OPTIONS]
 
   Install a new node according to OPTIONS.
-  OPTIONS override settings in $ETC/nodes/config-$LOREA_HOST
-  and in $ETC/templates/personal-node.sh.
+  OPTIONS override settings in $(_ETC)/nodes/config-$LOREA_HOST
+  and in $(_ETC)/templates/personal-node.sh.
   Missing settings are set interactively.
 
   Options:
@@ -50,7 +50,7 @@ lorea_help_setup() {
     lorea setup [VAR VAL [VAR VAL...]]
 
     Run lorea installation or manage configuration.
-    See '$ETC/templates/personal-node.sh' for available VARs.
+    See '$(_ETC)/templates/personal-node.sh' for available VARs.
 
 EOF
 }

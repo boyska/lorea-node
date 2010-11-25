@@ -4,6 +4,48 @@
 # Get current or Switch to new host
 #
 
+_create_user() {
+
+    test -z "$LOREA_USER" -o -z "$WWW_GROUP" && return 1
+
+    egrep "^$WWW_GROUP:" /etc/group &>/dev/null || sudo addgroup $WWW_GROUP
+
+    id -un $LOREA_USER &>/dev/null
+    if [ 1 -eq $? ]; then
+        # Create user
+        home="/home/$LOREA_USER"
+        echo "  *  Creating user $LOREA_USER...  Set home:"
+        _ask_update "home"
+        GROUP="$LOREA_USER"
+        echo "  *  Creating user $LOREA_USER...  Set primary group (e.g., $WWW_GROUP):"
+        _ask_update "GROUP"
+        create_user="sudo adduser --debug --system --home $home --shell /bin/bash"
+        if [ "$LOREA_USER" = "$GROUP" ]; then
+            create_user="$create_user --group"
+            LOREA_GROUP="$GROUP"
+        elif [ "$GROUP" != "$WWW_GROUP" ]; then
+            egrep "^$GROUP:" /etc/group &>/dev/null || sudo addgroup "$GROUP"
+            create_user="$create_user --ingroup $GROUP"
+            LOREA_GROUP="$GROUP"
+        else
+            create_user="$create_user --gid $(id -g $WWW_GROUP)"
+            LOREA_GROUP="$WWW_GROUP"
+        fi
+        $create_user --gecos "Lorea User" $LOREA_USER
+        # Grant user sudo privilege
+        sudo sed -ie "/^# User privilege specification/a \
+$LOREA_USER ALL=(ALL) ALL" /etc/sudoers
+        # Set a password
+        say "  *  Creating new password for $LOREA_USER: you will need it for sudo"
+        sudo passwd $LOREA_USER
+        # Add ~/bin to PATH
+        sudo mkdir -m 0700 $home/bin || true
+        sudo su - $LOREA_USER -c 'echo "test -d \$HOME/bin && export PATH=\"\$HOME/bin:\$PATH\"" >> $HOME/.profile'
+        # Fix permissions
+        sudo chown -R $LOREA_USER:$LOREA_GROUP $home
+    fi
+}
+
 _current_node() {
     # If we can't return anything interesting, bail out
     test -z "$1" -a -z "$LOREA_HOST" && return 1
@@ -11,15 +53,15 @@ _current_node() {
     test -n "$LOREA_HOST" -a "$LOREA_HOST" = "$1" && return 0
     # Validate host context
     local host=${1:-$LOREA_HOST}
-    test -f "$ETC/nodes/config-$host" && . "$ETC/nodes/config-$host"
+    test -f "$(_ETC)/nodes/config-$host" && . "$(_ETC)/nodes/config-$host" || LOREA_HOST="$host"
 }
 
 _etc_nodes() {
-    test -d $ETC/nodes || mkdir -m 0700 $ETC/nodes
+    test -d $(_ETC)/nodes || _current_user "mkdir -m 0700 $(_ETC)/nodes"
 }
 
 _etc_safe() {
-    test -d $ETC/safe || mkdir -m 0700 $ETC/safe
+    test -d $(_ETC)/safe || _current_user "mkdir -m 0700 $(_ETC)/safe"
 }
 
 lorea_etc_secret() {
@@ -32,7 +74,7 @@ lorea_etc_secret() {
 
 
 _hub_for_node() {
-    local node="$HUB/$LOREA_HOST"
+    local node="$(_HUB)/$LOREA_HOST"
     test -d "$node" && return 0
 
     mkdir -p -m 0750 "$node"
@@ -43,7 +85,7 @@ _hub_for_node() {
 }
 
 _keyfile() {
-    local keyfile="$ETC/safe/key-$1"
+    local keyfile="$(_ETC)/safe/key-$1"
 
     if [ ! -f "$keyfile" ]; then
         touch "$keyfile" && chmod 0600 "$keyfile" && \
