@@ -1,5 +1,5 @@
 #
-# -*- shell-script -*-
+# -*- mode: shell-script -*-
 #
 
 lorea_setup_config() {
@@ -78,13 +78,15 @@ _installer_run_user_setup() {
         echo " *  Change $var or press Enter to continue"
         read -e -i "$o" -p '    => ' val
         if [ -n "$val" -a "x$val" != "x$o" ]; then
-            $var="$val"
+            eval "$var=\"$val\""
             extra_config=$(echo -e "$var=\"$val\"\n$extra_config")
             echo "  $var set to $val"
         else
             echo "  $var unchanged ($o)"
         fi
     done
+    mkdir -p "$HOME/.config/lorea/" || true
+    chmod 0700 "$HOME/.config/lorea/"
     cat > "$HOME/.config/lorea/rc" <<EOF
 # -*- Mode: shell-script -*-
 #
