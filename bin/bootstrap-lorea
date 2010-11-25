@@ -59,6 +59,17 @@ read -esp "lorea: press Enter to bootstrap, or ^C to abort."
 
 ## Install Debian Dependencies
 
+# Make sure dpkg isn't running
+while ( test -f /var/lib/dpkg/lock ); do
+    if [ "x$(ps aux | egrep "apt|dpkg|synaptic" | grep -v grep | wc -l)" = "x0" ]; then
+        # No apt is running: we have a stale lock
+        sudo rm -f /var/lib/dpkg/lock
+    else
+        echo "lorea: a package manager is already running.  Waiting for it to finish. (You may want to kill it.)"
+        sleep 5
+    fi
+done
+
 echo -e "\nlorea: checking package dependencies."
 # LAMP stack
 lamp="apache2 mysql-server libapache2-mod-php5 libxml2"
@@ -66,6 +77,11 @@ lamp="apache2 mysql-server libapache2-mod-php5 libxml2"
 elgg="php5 php5-gd php5-mysql php-pear php-soap"
 # Lorea additions
 addons="git-core openssl php-openid wget"
+
+# Don't reinstall Apache2 if it's there (it might be TKI or something else)
+if [ -x "$(which apache2ctl)" ]; then
+    lamp=${lamp#apache2}
+fi
 
 2>/dev/null 
 sudo apt-get install -y -u $addons $elgg $lamp >&2
