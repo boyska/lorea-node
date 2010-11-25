@@ -241,7 +241,7 @@ lorea_node_setup_elgg() {
     ADM_EMAIL=; while test -z "$ADM_EMAIL"; do _ask_update "ADM_EMAIL"; done
     ADM_PASS=$(p=$(head -c 512 /dev/urandom | tr -cd 'A-F0-9'); echo ${p:1:8})
     sed -e \
-        "s&^require_once.*$&require_once('$ELGG/install/ElggInstaller.php')\;&; \
+        "s&^require_once.*$&require_once('$(_ELGG)/install/ElggInstaller.php')\;&; \
          s/^.*'dbuser'.*$/	'dbuser' => '$DB_USER',/; \
          s/^.*'dbpassword'.*$/	'dbpassword' => '$DB_PASS',/; \
          s/^.*'dbname'.*$/	'dbname' => '$DB_NAME',/; \
