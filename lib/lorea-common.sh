@@ -20,7 +20,7 @@ _lorea_env() {
     test -n "$LOREA_ENV" && return 0
     cat <<EOF
 
-lorea: LOREA_UNV is not set.
+lorea: LOREA_ENV is not set.
 
     This variable tells lorea where to get the supporting code.
     If you contribute to lorea-node you may set it to 'development'.
@@ -36,6 +36,10 @@ EOF
         2) declare -x LOREA_ENV="development";;
         *) declare -x LOREA_ENV="production";; # default to production
     esac
+}
+
+_lorea_log() {
+    mkdir -m 0710 -p $LOG || true
 }
 
 _lorea_tmp() {
@@ -153,7 +157,8 @@ lorea_status() {
     . "$LIB/lorea_status"
 
     local command="lorea_status_$1"
-    if ! -z "$1" -a type "$command" 2>/dev/null >&2; then
+    type "$command" 2>/dev/null >&2
+    if [ 0 -eq $? -a ! -z "$1" ]; then
         shift
         $command "$@"
     else

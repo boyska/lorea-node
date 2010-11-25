@@ -12,9 +12,11 @@ CWD="$(pwd)"
 declare -xA LOREA
 LOREA_DIR="$HOME/lorea-node"
 LOREA_USER="$(id -un)"
+LOREA_GROUP="$(id -gn)"
 LOREA_HOST="$LOREA_USER.lorea.local"
 LOREA_IP="127.0.0.1"
 LOREA_ENV="production"
+LOREA_LOG="$LOREA_DIR/log/lorea.log"
 
 WWW_GROUP="$(grep APACHE_RUN_GROUP /etc/apache2/envvars | awk -F= '{ print $2; }')"
 

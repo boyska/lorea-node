@@ -16,11 +16,9 @@ lorea_node_id() {
 }
 
 lorea_node_new() {
-    if [ -n "$1" ]; then
-        LOREA_HOST="$1"
-    fi
-    test -z "$LOREA_HOST" && . "$ETC/templates/personal-node.sh"
-    test -n "$LOREA_HOST" -a -f "$ETC/nodes/config-$LOREA_HOST" && . "$ETC/nodes/config-$LOREA_HOST"
+
+    ADM_EMAIL=
+    ADM_PASS=
 
     while getopts "g:h:H:i:N:P:R:u:U:" OPTION
     do
@@ -35,10 +33,12 @@ lorea_node_new() {
             u) LOREA_USER=$OPTARG;;
             U) DB_USER=$OPTARG;;
             *) 
-                echo "lorea: unknown argument -$OPTION" >2
+                echo "lorea: unknown argument -$OPTION" >&2
                 ;;
         esac
     done
+    test -z "$LOREA_HOST" && . "$ETC/templates/personal-node.sh"
+    test -n "$LOREA_HOST" -a -f "$ETC/nodes/config-$LOREA_HOST" && . "$ETC/nodes/config-$LOREA_HOST"
 
     lorea_status node
     local DONE=
@@ -98,7 +98,17 @@ lorea_node_new() {
 
     lorea trigger post-install "$LOREA_HOST" "$LOREA_USER" "$WWW_GROUP"
     sudo /etc/init.d/apache2 force-reload
-    lorea_status node
+ 
+    echo
+    echo "  You can now login into your Lorea node at"
+    echo
+    echo "    https://$LOREA_HOST/"
+    echo
+    echo "  Your Lorea Node administrator account is: 'root'."
+    echo "  Please change the generated password: '$ADM_PASS'."
+    echo
+    unset ADM_EMAIL
+    unset ADM_PASS
  }
 
 lorea_node_reset() {
@@ -135,7 +145,11 @@ lorea_node_save_config() {
     local config="$ETC/nodes/config-$LOREA_HOST"
     local extra_config=""
     for var in ${!LOREA_@} WWW_GROUP ${!DB_@}; do
-        val=$(eval echo \$$var)
+        if [ "LOREA_IP" = "$var" -a "*" = "$LOREA_IP" ]; then
+            val='*'
+        else
+            val=$(eval echo \$$var)
+        fi
         test -z "$val" || extra_config=$(echo -e "$var=\"$val\"\n$extra_config")
     done
     _etc_nodes
@@ -206,7 +220,7 @@ lorea_node_setup_elgg() {
     # Engine bootstrap
     echo "  *  Where should administrator email go?"
     ADM_EMAIL=; while test -z "$ADM_EMAIL"; do _ask_update "ADM_EMAIL"; done
-    local ADM_PASS=$(p=$(head -c 512 /dev/urandom | tr -cd 'A-F0-9'); echo ${p:1:8})
+    ADM_PASS=$(p=$(head -c 512 /dev/urandom | tr -cd 'A-F0-9'); echo ${p:1:8})
     sed -e \
         "s&^require_once.*$&require_once('$ELGG/install/ElggInstaller.php')\;&; \
          s/^.*'dbuser'.*$/	'dbuser' => '$DB_USER',/; \
@@ -220,19 +234,21 @@ lorea_node_setup_elgg() {
          s/^.*'username'.*$/	'username' => 'root',/; \
          s/^.*'password'.*$/	'password' => '$ADM_PASS',/" \
         "$ELGG/install/cli/sample_installer.php" > "$HUB/$LOREA_HOST/installer.php"
-    php5 -q -f "$HUB/$LOREA_HOST/installer.php"
+    _lorea_log
+    php5 -q -f "$HUB/$LOREA_HOST/installer.php" 2>>"$LOREA_LOG"
     # Fix .htaccess with higher file upload limits
-    sed -ie "s/\(# upload size limit to \)5Mb/\125Mb/;s/\(upload_max_filesize \)5242880/\126214400/" "$ELGG/.htaccess"
-
-    echo
-    echo "  You can now login into your Lorea node at"
-    echo
-    echo "    https://$LOREA_HOST/"
-    echo
-    echo "  Your Lorea Node administrator account is: 'root'."
-    echo "  Please change the generated password: '$ADM_PASS'."
-    echo
-    sleep 2
+    UPLOAD_LIMIT=25
+    echo "  *  Lorea increases the default upload size limit to ${UPLOAD_LIMIT}MB.  You may change it now."
+    _ask_update "UPLOAD_LIMIT"
+    sed -ie "s/\(# upload size limit to \)5Mb/\1${UPLOAD_LIMIT}Mb/;s/\(upload_max_filesize \)5242880/\1$[ 1024 * 1024 * $UPLOAD_LIMIT ]/" "$ELGG/.htaccess"
+    sudo sed -ie "s/^\(upload_max_filesize =\).*$/\1 $[ 1024 * 1024 * $UPLOAD_LIMIT ]M/" "/etc/php5/apache2/php.ini"
+    # Install logrotate configuration
+    sed -e \
+        "s&LOREA_DIR&$LOREA_DIR&; \
+         s/LOREA_HOST/$LOREA_HOST/; \
+         s/LOREA_GROUP/$(id -gn $LOREA_USER)/" \
+        "$ETC/logrotate.d/lorea-node.template" > "/tmp/lorea-node_$LOREA_HOST"
+    sudo mv "/tmp/lorea-node_$LOREA_HOST" "/etc/logrotate.d/"
 }
 
 _elgg_requirements() {
@@ -281,9 +297,9 @@ lorea_node_setup_apache() {
         _create_ssl_cert_for_node "$LOREA_HOST"
     fi
 
-    sudo a2enmod rewrite
-    sudo a2enmod ssl
-    sudo a2ensite $LOREA_HOST
+    sudo a2enmod rewrite        &>/dev/null
+    sudo a2enmod ssl            &>/dev/null
+    sudo a2ensite $LOREA_HOST   &>/dev/null
 }
 
 # Poor man's self-signed certificate

@@ -7,10 +7,8 @@
 # 
 # Copyright 2010 Lorea.org
 # This file is part of Lorea Node.
-# License: GNU Affero Public License
+# License: GNU Affero General Public License
 #
-
-NameVirtualHost LOREA_IP:80
 
 <VirtualHost LOREA_IP:80>
     ServerName   LOREA_HOST
@@ -64,8 +62,6 @@ NameVirtualHost LOREA_IP:80
 # Testing.
 #
 <IfModule mod_ssl.c>
-
-    NameVirtualHost LOREA_IP:443
 
     <VirtualHost LOREA_IP:443>
         ServerName  LOREA_HOST
