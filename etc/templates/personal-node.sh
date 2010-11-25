@@ -38,7 +38,7 @@ WWW_GROUP="$(grep APACHE_RUN_GROUP /etc/apache2/envvars | awk -F= '{ print $2; }
 #
 # Default: LOREA_IP="127.0.0.1"
 #
-LOREA_IP="127.0.0.127"
+LOREA_IP="127.0.0.1"
 #
 # == LOREA_HOST
 #
